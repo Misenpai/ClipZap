@@ -7,6 +7,12 @@ import SelectStyle from "./_components/SelectStyle";
 import SelectDuration from "./_components/SelectDuration";
 import { Button } from "@/components/ui/button";
 import CustomLoading from "./_components/CustomLoading";
+import { v4 as uuidv4 } from "uuid";
+
+type VideoScriptItem = {
+  imagePrompt: string;
+  ContentText: string;
+};
 
 const CreateNew = () => {
   const [formData, setFormData] = useState<
@@ -15,6 +21,7 @@ const CreateNew = () => {
 
   const [loading, setLoading] = useState<boolean>(false);
   const [videoScript, setVideoScript] = useState();
+  const [audioFileUrl, setAudioFileUrl] = useState();
 
   const onHandleInputChange = (
     fieldName: string,
@@ -41,6 +48,7 @@ const CreateNew = () => {
 
       console.log("Success:", response.data.result);
       setVideoScript(response.data.result);
+      GenerateAudioFile(response.data.result);
     } catch (error) {
       console.error("Error generating video script:", error);
       if (axios.isAxiosError(error) && error.response) {
@@ -49,6 +57,24 @@ const CreateNew = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const GenerateAudioFile = async (videoScriptData: VideoScriptItem[]) => {
+    let script = "";
+    const id = uuidv4();
+    videoScriptData.forEach((item) => {
+      script = script + item.ContentText + " ";
+    });
+    console.log(script);
+    await axios
+      .post("/api/generate-audio", {
+        text: script,
+        id: id,
+      })
+      .then((resp) => {
+        console.log(resp.data);
+        setAudioFileUrl(resp.data.result);
+      });
   };
 
   return (
