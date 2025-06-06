@@ -22,6 +22,7 @@ const CreateNew = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [videoScript, setVideoScript] = useState();
   const [audioFileUrl, setAudioFileUrl] = useState();
+  const [captions, setCaptions] = useState();
 
   const onHandleInputChange = (
     fieldName: string,
@@ -60,21 +61,46 @@ const CreateNew = () => {
   };
 
   const GenerateAudioFile = async (videoScriptData: VideoScriptItem[]) => {
-    let script = "";
-    const id = uuidv4();
-    videoScriptData.forEach((item) => {
-      script = script + item.ContentText + " ";
-    });
-    console.log(script);
-    await axios
-      .post("/api/generate-audio", {
+    setLoading(true);
+    try {
+      let script = "";
+      const id = uuidv4();
+      videoScriptData.forEach((item) => {
+        script = script + item.ContentText + " ";
+      });
+      console.log(script);
+      const resp = await axios.post("/api/generate-audio", {
         text: script,
         id: id,
-      })
-      .then((resp) => {
-        console.log(resp.data);
-        setAudioFileUrl(resp.data.result);
       });
+      console.log(resp.data);
+      setAudioFileUrl(resp.data.result);
+    } catch (error) {
+      console.error("Error generating audio file:", error);
+      if (axios.isAxiosError(error) && error.response) {
+        console.error("Server responded with:", error.response.data);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const GenerateAudioCaption = async (fileUrl: string) => {
+    setLoading(true);
+    try {
+      const resp = await axios.post("/api/generate-caption", {
+        audioFileUrl: fileUrl,
+      });
+      console.log(resp.data.result);
+      setCaptions(resp.data.result);
+    } catch (error) {
+      console.error("Error generating audio caption:", error);
+      if (axios.isAxiosError(error) && error.response) {
+        console.error("Server responded with:", error.response.data);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
