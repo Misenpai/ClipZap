@@ -43,6 +43,7 @@ export async function POST(req: Request) {
     );
 
     return NextResponse.json({
+      result: downloadURL,
       message: "Audio file generated and uploaded successfully",
       filename: id + ".mp3",
       downloadURL: downloadURL,
