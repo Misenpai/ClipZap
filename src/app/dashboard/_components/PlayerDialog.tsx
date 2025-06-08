@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,7 @@ import { VideoData } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { useRouter } from "next/navigation";
 import { DatabaseVideoData } from "@/app/types/video";
-
+import { VideoDataContext } from "@/app/_context/VideoDataContext";
 
 interface PlayerDialogProps {
   playVideo: boolean;
@@ -27,6 +27,9 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({ playVideo, videoId }) => {
   const [videoData, setVideoData] = useState<DatabaseVideoData | undefined>();
   const [durationInFrame, setDurationInFrame] = useState<number>(100);
   const router = useRouter();
+
+  const context = useContext(VideoDataContext);
+  const setContextVideoData = context?.setVideoData;
 
   useEffect(() => {
     setOpenDialog(playVideo);
@@ -43,6 +46,14 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({ playVideo, videoId }) => {
       .from(VideoData)
       .where(eq(VideoData.id, videoId));
     setVideoData(result[0] as DatabaseVideoData);
+  };
+
+  const handleCancel = () => {
+    if (setContextVideoData) {
+      setContextVideoData({});
+    }
+    router.replace("/dashboard");
+    setOpenDialog(false);
   };
 
   return (
@@ -69,13 +80,7 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({ playVideo, videoId }) => {
               />
             )}
             <div className="flex gap-10 mt-10">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  router.replace("/dashboard");
-                  setOpenDialog(false);
-                }}
-              >
+              <Button variant="ghost" onClick={handleCancel}>
                 Cancel
               </Button>
               <Button>Export</Button>
