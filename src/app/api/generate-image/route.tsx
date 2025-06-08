@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     }
 
     const result = await hf.textToImage({
-      model: "runwayml/stable-diffusion-v1-5",
+      model: "stabilityai/stable-diffusion-xl-base-1.0",
       inputs: prompt,
       parameters: {
         negative_prompt,
