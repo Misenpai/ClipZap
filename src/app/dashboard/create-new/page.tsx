@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import SelectTopic from "./_components/SelectTopic";
 import SelectStyle from "./_components/SelectStyle";
@@ -12,24 +12,28 @@ import { VideoDataContext } from "@/app/_context/VideoDataContext";
 import { useUser } from "@clerk/nextjs";
 import { db } from "@/db";
 import { VideoData } from "@/db/schema";
-
-type VideoScriptItem = {
-  imagePrompt: string;
-  ContentText: string;
-};
+import PlayerDialog from "../_components/PlayerDialog";
+import { VideoScriptItem, ImageData, VideoDataType } from "@/types/video";
 
 const CreateNew = () => {
   const [formData, setFormData] = useState<
     Record<string, string | number | boolean>
   >({});
-
   const [loading, setLoading] = useState<boolean>(false);
   const [videoScript, setVideoScript] = useState<VideoScriptItem[]>([]);
-  const [audioFileUrl, setAudioFileUrl] = useState();
-  const [captions, setCaptions] = useState();
-  const [imageList, setImageList] = useState<any[]>([]);
-  const { videoData, setVideoData } = useContext(VideoDataContext);
+  const [audioFileUrl, setAudioFileUrl] = useState<string>("");
+  const [captions, setCaptions] = useState<any[]>([]);
+  const [imageList, setImageList] = useState<ImageData[]>([]);
+
+  const context = useContext(VideoDataContext);
+  if (!context) {
+    throw new Error("CreateNew must be used within a VideoDataProvider");
+  }
+  const { videoData, setVideoData } = context;
+
   const { user } = useUser();
+  const [playVideo, setPlayVideo] = useState<boolean>(false);
+  const [videoId, setVideoId] = useState<number | undefined>();
 
   const onHandleInputChange = (
     fieldName: string,
@@ -55,7 +59,7 @@ const CreateNew = () => {
       });
 
       console.log("Success:", response.data.result);
-      setVideoData((prev) => ({
+      setVideoData((prev: VideoDataType) => ({
         ...prev,
         videoScript: response.data.result,
       }));
@@ -79,29 +83,23 @@ const CreateNew = () => {
       videoScriptData.forEach((item) => {
         script = script + item.ContentText + " ";
       });
-      console.log("Script:", script);
 
       const resp = await axios.post("/api/generate-audio", {
         text: script,
         id: id,
       });
-      setVideoData((prev) => ({
+
+      setVideoData((prev: VideoDataType) => ({
         ...prev,
         audioFileUrl: resp.data.result,
       }));
       setAudioFileUrl(resp.data.result);
 
       if (resp.data.result) {
-        console.log("Calling GenerateAudioCaption...");
         GenerateAudioCaption(resp.data.result, videoScriptData);
-      } else {
-        console.log("No result found, not calling GenerateAudioCaption");
       }
     } catch (error) {
       console.error("Error generating audio file:", error);
-      if (axios.isAxiosError(error) && error.response) {
-        console.error("Server responded with:", error.response.data);
-      }
     } finally {
       setLoading(false);
     }
@@ -116,20 +114,18 @@ const CreateNew = () => {
       const resp = await axios.post("/api/generate-caption", {
         audioFileUrl: fileUrl,
       });
-      console.log(resp.data.result);
-      setVideoData((prev) => ({
+
+      setVideoData((prev: VideoDataType) => ({
         ...prev,
         captions: resp.data.result,
       }));
       setCaptions(resp.data.result);
+
       if (resp.data.result) {
         GenerateImage(videoScriptData);
       }
     } catch (error) {
       console.error("Error generating audio caption:", error);
-      if (axios.isAxiosError(error) && error.response) {
-        console.error("Server responded with:", error.response.data);
-      }
     } finally {
       setLoading(false);
     }
@@ -159,13 +155,15 @@ const CreateNew = () => {
       });
 
       const generatedImages = await Promise.all(imagePromises);
-      const validImages = generatedImages.filter((image) => image !== null);
-      setVideoData((prev) => ({
+      const validImages = generatedImages.filter(
+        (image): image is ImageData => image !== null
+      );
+
+      setVideoData((prev: VideoDataType) => ({
         ...prev,
         imageList: validImages,
       }));
       setImageList(validImages);
-      console.log(imageList, videoScript, audioFileUrl, captions);
     } catch (error) {
       console.error("Error in GenerateImage:", error);
     } finally {
@@ -173,39 +171,53 @@ const CreateNew = () => {
     }
   };
 
+  const SaveVideoData = useCallback(
+    async (videoData: VideoDataType) => {
+      setLoading(true);
+      try {
+        const imageUrls =
+          videoData?.imageList?.map((img) => img.firebaseUrl) || [];
+
+        if (!user?.primaryEmailAddress?.emailAddress) {
+          throw new Error("User email not found");
+        }
+
+        const result = await db
+          .insert(VideoData)
+          .values({
+            script: videoData?.videoScript,
+            audioFileUrl: videoData?.audioFileUrl || "",
+            captions: videoData?.captions,
+            imageList: imageUrls,
+            createdBy: user.primaryEmailAddress.emailAddress,
+          })
+          .returning({ id: VideoData?.id });
+
+        setVideoId(result[0].id);
+        setPlayVideo(true);
+        console.log(result);
+        return result;
+      } catch (error) {
+        console.error("Error saving video data:", error);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
+
   useEffect(() => {
-    console.log(videoData);
-    if (Object.keys(videoData).length == 4) {
+    const hasAllRequiredData =
+      videoData.videoScript &&
+      videoData.audioFileUrl &&
+      videoData.captions &&
+      videoData.imageList;
+
+    if (hasAllRequiredData) {
       SaveVideoData(videoData);
     }
-  }, [videoData]);
-
-  const SaveVideoData = async (videoData) => {
-    setLoading(true);
-    try {
-      const imageUrls =
-        videoData?.imageList?.map((img) => img.firebaseUrl) || [];
-
-      const result = await db
-        .insert(VideoData)
-        .values({
-          script: videoData?.videoScript,
-          audioFileUrl: videoData?.audioFileUrl,
-          captions: videoData?.captions,
-          imageList: imageUrls,
-          createdBy: user?.primaryEmailAddress?.emailAddress,
-        })
-        .returning({ id: VideoData?.id });
-
-      console.log(result);
-      setLoading(false);
-      return result;
-    } catch (error) {
-      console.error("Error saving video data:", error);
-      setLoading(false);
-      throw error;
-    }
-  };
+  }, [videoData, SaveVideoData]);
 
   return (
     <div className="md:px-20">
@@ -213,19 +225,14 @@ const CreateNew = () => {
         Create New
       </h2>
       <div className="mt-10 shadow-md p-10">
-        {/* Select Topic  */}
         <SelectTopic onUserSelect={onHandleInputChange} />
-        {/* Select Style  */}
         <SelectStyle onUserSelect={onHandleInputChange} />
-
-        {/* Duration  */}
         <SelectDuration onUserSelect={onHandleInputChange} />
-        {/* Create Button  */}
         <Button className="mt-10 w-full" onClick={onCreateClickHandler}>
           Create Short Video
         </Button>
-
         <CustomLoading loading={loading} />
+        <PlayerDialog playVideo={playVideo} videoId={videoId} />
       </div>
     </div>
   );
