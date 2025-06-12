@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/configs/FirebaseConfig";
 
+
 export async function POST(req: Request) {
   try {
     const { text, id } = await req.json();
