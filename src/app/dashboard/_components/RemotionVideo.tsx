@@ -15,7 +15,7 @@ interface RemotionVideoProps {
   imageList?: string[];
   audioFileUrl?: string;
   captions?: Caption[];
-  setDurationInFrame: (duration: number) => void;
+  setDurationInFrame?: (duration: number) => void; // <-- Make optional
 }
 
 const RemotionVideo: React.FC<RemotionVideoProps> = ({
@@ -30,7 +30,7 @@ const RemotionVideo: React.FC<RemotionVideoProps> = ({
   const getDurationFrames = () => {
     if (!captions || captions.length === 0) return 100;
     const duration = (captions[captions.length - 1]?.end / 1000) * fps;
-    setDurationInFrame(duration);
+    if (setDurationInFrame) setDurationInFrame(duration); // <-- Check existence
     return duration;
   };
 

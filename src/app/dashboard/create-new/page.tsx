@@ -13,7 +13,7 @@ import { useUser } from "@clerk/nextjs";
 import { db } from "@/db";
 import { VideoData } from "@/db/schema";
 import PlayerDialog from "../_components/PlayerDialog";
-import { VideoScriptItem, ImageData, VideoDataType } from "@/types/video";
+import { VideoScriptItem, ImageData, VideoDataType } from "@/app/types/video";
 
 const CreateNew = () => {
   const [formData, setFormData] = useState<
@@ -22,7 +22,7 @@ const CreateNew = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [videoScript, setVideoScript] = useState<VideoScriptItem[]>([]);
   const [audioFileUrl, setAudioFileUrl] = useState<string>("");
-  const [captions, setCaptions] = useState<any[]>([]);
+  const [captions, setCaptions] = useState<unknown[]>([]);
   const [imageList, setImageList] = useState<ImageData[]>([]);
 
   const context = useContext(VideoDataContext);
@@ -218,6 +218,13 @@ const CreateNew = () => {
       SaveVideoData(videoData);
     }
   }, [videoData, SaveVideoData]);
+
+  useEffect(() => {
+    console.log("videoScript:", videoScript);
+    console.log("audioFileUrl:", audioFileUrl);
+    console.log("captions:", captions);
+    console.log("imageList:", imageList);
+  }, [videoScript, audioFileUrl, captions, imageList]);
 
   return (
     <div className="md:px-20">

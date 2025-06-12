@@ -27,17 +27,20 @@ export async function POST(req: Request) {
       );
     }
 
-    const result = await hf.textToImage({
-      model: "stabilityai/stable-diffusion-xl-base-1.0",
-      inputs: prompt,
-      parameters: {
-        negative_prompt,
-        num_inference_steps,
-        guidance_scale,
-        width,
-        height,
+    const result = await hf.textToImage(
+      {
+        model: "stabilityai/stable-diffusion-xl-base-1.0",
+        inputs: prompt,
+        parameters: {
+          negative_prompt,
+          num_inference_steps,
+          guidance_scale,
+          width,
+          height,
+        },
       },
-    });
+      { outputType: "blob" } // Ensure result is always a Blob
+    );
 
     const arrayBuffer = await result.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);

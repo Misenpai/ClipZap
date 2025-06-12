@@ -15,6 +15,7 @@ const Provider = ({ children }: { children: ReactNode }) => {
     if (user) {
       isNewUser();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const isNewUser = async () => {

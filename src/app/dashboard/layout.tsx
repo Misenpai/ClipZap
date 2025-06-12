@@ -6,7 +6,8 @@ import SideNav from "./_components/SideNav";
 import { VideoDataContext } from "../_context/VideoDataContext";
 
 const DashboardLayout = ({ children }: { children: ReactElement }) => {
-  const [videoData, setVideoData] = useState([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [videoData, setVideoData] = useState<any>([]);
   return (
     <VideoDataContext.Provider value={{ videoData, setVideoData }}>
       <div>
