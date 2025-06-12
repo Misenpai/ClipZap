@@ -84,7 +84,6 @@ const PlayerDialog: React.FC<PlayerDialogProps> = ({ playVideo, videoId }) => {
               <Button variant="ghost" onClick={handleCancel}>
                 Cancel
               </Button>
-              <Button>Export</Button>
             </div>
           </DialogDescription>
         </DialogHeader>
